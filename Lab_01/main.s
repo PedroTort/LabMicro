@@ -61,7 +61,7 @@ Start
 	MOV		R8, #1								;valor atual
 	LDR		R6, = lista_multiplicadores			;pegando endereço na lista de tabuadas	
 	MOV		R5, #1
-	MOV		R4,	#2_00000000
+	MOV		R4,	#2_00000001
 	
 ZeraMemoria	
 	CMP		R5,#10
@@ -73,11 +73,6 @@ ZeraMemoria
 	LDR		R6, =lista_multiplicadores							;volta pro endereço inicial
 	ADD		R6, R9												;vai para o endereço da tabuada atual
 	LDRB	R7,	[R6]											;salva o valor no R7
-	ADD		R7, R9
-	STRB	R7, [R6]
-
-
-		
 
 	
 MainLoop
