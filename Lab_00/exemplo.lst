@@ -1,0 +1,216 @@
+
+
+
+ARM Macro Assembler    Page 1 
+
+
+    1 00000000         ; Exemplo.s
+    2 00000000         ; Prof. Guilherme Peron
+    3 00000000         ; Lab0
+    4 00000000         ; Eduardo Soviersovski
+    5 00000000         ; Pedro Tortola
+    6 00000000         ; 04/09/2023
+    7 00000000         
+    8 00000000         ; ------------------------------------------------------
+                       -------------------------
+    9 00000000                 THUMB                        ; Instruções do tip
+                                                            o Thumb-2
+   10 00000000         ; ------------------------------------------------------
+                       -------------------------
+   11 00000000         ; Declarações EQU - Defines
+   12 00000000         ;<NOME>         EQU <VALOR>
+   13 00000000         ; ------------------------------------------------------
+                       -------------------------
+   14 00000000         ; Área de Dados - Declarações de variáveis
+   15 00000000                 AREA             DATA, ALIGN=2
+   16 00000000         
+   17 00000000         ; ------------------------------------------------------
+                       -------------------------
+   18 00000000         ; Área de Código - Tudo abaixo da diretiva a seguir será
+                        armazenado na memória de 
+   19 00000000         ;                  código
+   20 00000000                 AREA             |.text|, CODE, READONLY, ALIGN=
+2
+   21 00000000         
+   22 00000000                 EXPORT           Start       ; Permite chamar a 
+                                                            função Start a part
+                                                            ir de 
+   23 00000000         
+   24 00000000         
+   25 00000000 20000400 
+                       inicio  EQU              0x20000400
+   26 00000000 20000500 
+                       maior   EQU              0x20000500
+   27 00000000         
+   28 00000000         ; ------------------------------------------------------
+                       -------------------------
+   29 00000000         ; Função main()
+   30 00000000         Start
+   31 00000000         ; Comece o código aqui <================================
+                       ======================
+   32 00000000         
+   33 00000000         
+   34 00000000 4812            LDR              R0, =string ;pegando o endereço
+                                                             do primeiro valor 
+                                                            do vetor e salva no
+                                                             R0
+   35 00000002 4913            LDR              R1, =0x2000041A
+   36 00000004 4A13            LDR              R2, =inicio
+   37 00000006 F04F 0300       MOV              R3, #0
+   38 0000000A 4C13            LDR              R4, =maior
+   39 0000000C         
+   40 0000000C         
+   41 0000000C         conta_letras
+   42 0000000C 7805            LDRB             R5, [R0]    ;pega o valor do en
+                                                            dereço, salva no R5
+
+
+
+ARM Macro Assembler    Page 2 
+
+
+                                                            
+   43 0000000E F100 0001       ADD              R0, #1      ;atualiza o indice
+   44 00000012 4E10            LDR              R6, =inicio ;pega o endereço 0x
+                                                            20000400
+   45 00000014 442E            ADD              R6, R5      ;soma o valor em he
+                                                            xa da letra atual
+   46 00000016 F2A6 0641       ADD              R6, #-0x41  ;subtrai valor de A
+                                                             em hexa, para sabe
+                                                            r qual é o que esta
+                                                             sendo lido
+   47 0000001A 6837            LDR              R7, [R6]    ;quantidade atual d
+                                                            a letra e salvando 
+                                                            no R7
+   48 0000001C F107 0701       ADD              R7, #1      ;soma 1 no endereço
+                                                             atual
+   49 00000020 6037            STR              R7, [R6]    ;volta pro valor at
+                                                            ualizado
+   50 00000022 2D00            CMP              R5, #0
+   51 00000024 D1F2            BNE              conta_letras
+   52 00000026         
+   53 00000026         pega_maior
+   54 00000026 F892 8000       LDRB             R8, [R2]    ;pega endereço da p
+                                                            rimeira letra A
+   55 0000002A 4598            CMP              R8, R3      ;compara para ver s
+                                                            e é maior que a mai
+                                                            or
+   56 0000002C BF88            IT               HI
+   57 0000002E 4643            MOVHI            R3, R8      ;atualizando o maio
+                                                            r
+   58 00000030 F102 0201       ADD              R2, #1      ;atualiza o indice
+   59 00000034 428A            CMP              R2, R1      ;verifica se chegou
+                                                             no Z+1
+   60 00000036 DBF6            BLT              pega_maior
+   61 00000038         
+   62 00000038 6023            STR              R3, [R4]    ;adiciona o maior n
+                                                            o 0x20000500
+   63 0000003A         
+   64 0000003A BF00            NOP
+   65 0000003C 4D 41 54 
+              45 52 49 
+              41 4D 49 
+              43 52 4F 
+              00       string  DCB              "MATERIAMICRO" ,0
+   66 00000049         
+   67 00000049 00 00 00        ALIGN                        ; garante que o fim
+                                                             da seção está alin
+                                                            hada 
+   68 0000004C                 END                          ; fim do arquivo
+              00000000 
+              2000041A 
+              20000400 
+              20000500 
+Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M4.fp --apcs=int
+erwork --depend=.\exemplo.d -o.\exemplo.o -IC:\Users\DAELN\Downloads\EduardoSov
+iersovski_PedroTortola_ap0\RTE -IC:\Keil_v5\ARM\PACK\Keil\TM4C_DFP\1.1.0\Device
+\Include\TM4C129 -IC:\Keil_v5\ARM\CMSIS\Include --predefine="__EVAL SETA 1" --p
+redefine="__UVISION_VERSION SETA 518" --predefine="TM4C1294NCPDT SETA 1" --list
+=.\exemplo.lst exemplo.s
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Relocatable symbols
+
+DATA 00000000
+
+Symbol: DATA
+   Definitions
+      At line 15 in file exemplo.s
+   Uses
+      None
+Comment: DATA unused
+1 symbol
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Relocatable symbols
+
+.text 00000000
+
+Symbol: .text
+   Definitions
+      At line 20 in file exemplo.s
+   Uses
+      None
+Comment: .text unused
+Start 00000000
+
+Symbol: Start
+   Definitions
+      At line 30 in file exemplo.s
+   Uses
+      At line 22 in file exemplo.s
+Comment: Start used once
+conta_letras 0000000C
+
+Symbol: conta_letras
+   Definitions
+      At line 41 in file exemplo.s
+   Uses
+      At line 51 in file exemplo.s
+Comment: conta_letras used once
+pega_maior 00000026
+
+Symbol: pega_maior
+   Definitions
+      At line 53 in file exemplo.s
+   Uses
+      At line 60 in file exemplo.s
+Comment: pega_maior used once
+string 0000003C
+
+Symbol: string
+   Definitions
+      At line 65 in file exemplo.s
+   Uses
+      At line 34 in file exemplo.s
+Comment: string used once
+5 symbols
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Absolute symbols
+
+inicio 20000400
+
+Symbol: inicio
+   Definitions
+      At line 25 in file exemplo.s
+   Uses
+      At line 36 in file exemplo.s
+      At line 44 in file exemplo.s
+
+maior 20000500
+
+Symbol: maior
+   Definitions
+      At line 26 in file exemplo.s
+   Uses
+      At line 38 in file exemplo.s
+Comment: maior used once
+2 symbols
+344 symbols in table
