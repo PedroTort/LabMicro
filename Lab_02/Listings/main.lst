@@ -1,0 +1,1373 @@
+
+
+
+ARM Macro Assembler    Page 1 
+
+
+    1 00000000         ; main.s
+    2 00000000         ; Desenvolvido para a placa EK-TM4C1294XL
+    3 00000000         ; Prof. Guilherme Peron
+    4 00000000         ; Ver 1 19/03/2018
+    5 00000000         ; Ver 2 26/08/2018
+    6 00000000         ; Este programa deve esperar o usuário pressionar uma ch
+                       ave.
+    7 00000000         ; Caso o usuário pressione uma chave, um LED deve piscar
+                        a cada 1 segundo.
+    8 00000000         
+    9 00000000         ; ------------------------------------------------------
+                       -------------------------
+   10 00000000                 THUMB                        ; Instruções do tip
+                                                            o Thumb-2
+   11 00000000         ; ------------------------------------------------------
+                       -------------------------
+   12 00000000         
+   13 00000000         ; Declarações EQU - Defines
+   14 00000000         ;<NOME>         EQU <VALOR>
+   15 00000000         ; ========================
+   16 00000000         ; Definições de Valores
+   17 00000000         
+   18 00000000         
+   19 00000000         ; ------------------------------------------------------
+                       -------------------------
+   20 00000000         ; Área de Dados - Declarações de variáveis
+   21 00000000                 AREA             DATA, ALIGN=2
+   22 00000000         ; Se alguma variável for chamada em outro arquivo
+   23 00000000         ;EXPORT  <var> [DATA,SIZE=<tam>]   ; Permite chamar a va
+                       riável <var> a 
+   24 00000000         ; partir de outro arquivo
+   25 00000000         ;<var> SPACE <tam>                        ; Declara uma 
+                       variável de nome <var>
+   26 00000000         ; de <tam> bytes a partir da primeira 
+   27 00000000         ; posição da RAM 
+   28 00000000 00 00 00 
+              00       senha   SPACE            4
+   29 00000004 00 00 00 
+              00       tentativa
+                               SPACE            4
+   30 00000008 00      quantidade_digitos_corretos
+                               SPACE            1
+   31 00000009 00 00 00 
+              00       senha_mestra
+                               SPACE            4           ;0000
+   32 0000000D         
+   33 0000000D         
+   34 0000000D 4006041C 
+                       GPIO_PORTJ_AHB_ICR_R
+                               EQU              0x4006041C
+   35 0000000D         
+   36 0000000D         ; ------------------------------------------------------
+                       -------------------------
+   37 0000000D         ; Área de Código - Tudo abaixo da diretiva a seguir será
+                        armazenado na memória de 
+   38 0000000D         ;                  código
+   39 0000000D                 AREA             |.text|, CODE, READONLY, ALIGN=
+2
+   40 00000000         
+
+
+
+ARM Macro Assembler    Page 2 
+
+
+   41 00000000         ; Se alguma função do arquivo for chamada em outro arqui
+                       vo 
+   42 00000000                 EXPORT           Start       ; Permite chamar a 
+                                                            função Start a part
+                                                            ir de 
+   43 00000000         ; outro arquivo. No caso startup.s
+   44 00000000         
+   45 00000000         ; Se chamar alguma função externa 
+   46 00000000         ;IMPORT <func>              ; Permite chamar dentro dest
+                       e arquivo uma 
+   47 00000000         ; função <func>
+   48 00000000                 IMPORT           PLL_Init
+   49 00000000                 IMPORT           SysTick_Init
+   50 00000000                 IMPORT           SysTick_Wait1ms
+   51 00000000                 IMPORT           SysTick_Wait1us
+   52 00000000                 IMPORT           GPIO_Init
+   53 00000000                 IMPORT           PortL_Input
+   54 00000000                 IMPORT           PortM_Dir
+   55 00000000                 IMPORT           PortM_Output
+   56 00000000                 IMPORT           Display_Init
+   57 00000000                 IMPORT           Display_Config
+   58 00000000                 IMPORT           Display_Clear
+   59 00000000                 IMPORT           Display_Write
+   60 00000000                 IMPORT           Interrupt_Init
+   61 00000000                 IMPORT           Led_Enable
+   62 00000000         
+   63 00000000                 EXPORT           GPIOPortJ_Handler
+   64 00000000         
+   65 00000000         
+   66 00000000 43 6F 66 
+              72 65 20 
+              41 62 65 
+              72 74 6F 
+              40 53 65 
+              6E 68 61 
+              3A 00    STRING_ABERTO
+                               DCB              "Cofre Aberto@Senha:", 0
+   67 00000014 43 6F 66 
+              72 65 20 
+              41 62 72 
+              69 6E 64 
+              6F 00    STRING_ABRINDO
+                               DCB              "Cofre Abrindo", 0
+   68 00000022 43 6F 66 
+              72 65 20 
+              46 65 63 
+              68 61 64 
+              6F 40 53 
+              65 6E 68 
+              61 3A 00 STRING_FECHADO
+                               DCB              "Cofre Fechado@Senha:", 0
+   69 00000037 43 6F 66 
+              72 65 20 
+              46 65 63 
+              68 61 6E 
+              64 6F 00 STRING_FECHANDO
+                               DCB              "Cofre Fechando", 0
+   70 00000046 43 6F 66 
+              72 65 20 
+
+
+
+ARM Macro Assembler    Page 3 
+
+
+              54 72 61 
+              6E 63 61 
+              64 6F 00 STRING_TRANCADO
+                               DCB              "Cofre Trancado", 0
+   71 00000055 53 65 6E 
+              68 61 20 
+              4D 65 73 
+              74 72 61 
+              40 53 65 
+              6E 68 61 
+              3A 00    STRING_MESTRA
+                               DCB              "Senha Mestra@Senha:", 0
+   72 00000069 2A 00   STRING_ASTERISCO
+                               DCB              "*", 0
+   73 0000006B         ; ------------------------------------------------------
+                       -------------------------
+   74 0000006B         ; Função main()
+   75 0000006B         Start
+   76 0000006B 00 F7FF 
+              FFFE             BL               PLL_Init    ; Chama a subrotina
+                                                             para alterar o clo
+                                                            ck do microcontrola
+                                                            dor para 80MHz
+   77 00000070 F7FF FFFE       BL               SysTick_Init ; Chama a subrotin
+                                                            a para inicializar 
+                                                            o SysTick
+   78 00000074 F7FF FFFE       BL               GPIO_Init   ; Chama a subrotina
+                                                             que inicializa os 
+                                                            GPIO
+   79 00000078 F7FF FFFE       BL               Interrupt_Init
+   80 0000007C F7FF FFFE       BL               Display_Init
+   81 00000080 F8DF 801C       LDR              R8, =senha
+   82 00000084 4F07            LDR              R7, =senha_mestra
+   83 00000086 F04F 0300       MOV              R3, #0
+   84 0000008A 703B            STRB             R3, [R7]
+   85 0000008C F107 0701       ADD              R7, #1
+   86 00000090 703B            STRB             R3, [R7]
+   87 00000092 F107 0701       ADD              R7, #1
+   88 00000096 703B            STRB             R3, [R7]
+   89 00000098 F107 0701       ADD              R7, #1
+   90 0000009C 703B            STRB             R3, [R7]
+   91 0000009E 4F02            LDR              R7, =tentativa
+   92 000000A0 00000000 
+              00000000 
+              00000000         LTORG
+   93 000000AC F04F 0A00       MOV              R10, #0     ; Aux para fazer o 
+                                                            shift no r0!
+   94 000000B0 F04F 0B00       MOV              R11, #0     ; Variavel para sab
+                                                            er quan7tos digitos
+                                                             ja foram pressiona
+                                                            dos
+   95 000000B4 F04F 0C00       MOV              R12, #0     ; Variavel para sab
+                                                            er o estado atual d
+                                                            o cofre (0-aberto, 
+                                                            1-fechando, 2-fecha
+                                                            do, 3-Abrindo, 4-Tr
+                                                            ancado) 
+   96 000000B8 F04F 0600       MOV              R6, #0      ; Numero de tentati
+                                                            vas de abrir o cofr
+
+
+
+ARM Macro Assembler    Page 4 
+
+
+                                                            e!
+   97 000000BC F04F 0500       MOV              R5, #0
+   98 000000C0         
+   99 000000C0         
+  100 000000C0         
+  101 000000C0         
+  102 000000C0         MainLoop
+  103 000000C0         
+  104 000000C0 F7FF FFFE       BL               Display_Clear
+  105 000000C4 F000 F850       BL               EscreveTextoLCD
+  106 000000C8 F000 F801       BL               ConfiguraTeclado
+  107 000000CC E007            B                LoopLeColuna
+  108 000000CE         
+  109 000000CE         
+  110 000000CE         ConfiguraTeclado
+  111 000000CE F04F 0000       MOV              R0, #0
+  112 000000D2 B500            PUSH{LR}
+  113 000000D4 F7FF FFFE       BL               PortM_Dir
+  114 000000D8 F85D EB04       POP{LR}
+  115 000000DC 4770            BX               LR
+  116 000000DE         
+  117 000000DE         LoopLeColuna                         ; ele só ta pegando
+                                                             a primeira coluna!
+                                                             ver esse R10 ai/re
+                                                            ver o PortM_Dir e o
+                                                             PortM_Output   
+  118 000000DE F04F 0001       MOV              R0, #1      ; 
+  119 000000E2 EA4F 1000       LSL              R0, #4
+  120 000000E6 F04F 0900       MOV              R9, #0      ; Variavel que rece
+                                                            be o valor da tecla
+                                                             digitada
+  121 000000EA FA00 F00A       LSL              R0, R10     ; Primeira coluna r
+                                                            ecebe 0
+  122 000000EE F1BA 0F04       CMP              R10, #4
+  123 000000F2 BF14            ITE              NE
+  124 000000F4 F10A 0A01       ADDNE            R10, #1
+  125 000000F8 F04F 0A00       MOVEQ            R10,#0
+  126 000000FC         
+  127 000000FC B500            PUSH{LR}
+  128 000000FE F7FF FFFE       BL               PortM_Dir
+  129 00000102 F85D EB04       POP{LR}
+  130 00000106         
+  131 00000106 B500            PUSH{LR}
+  132 00000108 F7FF FFFE       BL               PortM_Output
+  133 0000010C F85D EB04       POP{LR}
+  134 00000110         
+  135 00000110 F1BB 0F04       CMP              R11, #4
+  136 00000114 B500            PUSH{LR}
+  137 00000116 BF08 F000 
+              F899             BLEQ             EsperaEnter
+  138 0000011C F85D EB04       POP{LR}
+  139 00000120         
+  140 00000120 F1BC 0F05       CMP              R12, #5
+  141 00000124 B401            PUSH{R0}
+  142 00000126 BF08 F000 
+              F931             BLEQ             LoopLeds
+  143 0000012C BC01            POP{R0}
+  144 0000012E         
+  145 0000012E 2810            CMP              R0, #2_00010000
+
+
+
+ARM Macro Assembler    Page 5 
+
+
+  146 00000130 B500            PUSH{LR}
+  147 00000132 BF08 F000 
+              F944             BLEQ             VarrePrimeiraColuna
+  148 00000138 F85D EB04       POP{LR}
+  149 0000013C         
+  150 0000013C 2820            CMP              R0, #2_00100000
+  151 0000013E B500            PUSH{LR}
+  152 00000140 BF08 F000 
+              F961             BLEQ             VarreSegundaColuna
+  153 00000146 F85D EB04       POP{LR}
+  154 0000014A         
+  155 0000014A 2840            CMP              R0, #2_01000000
+  156 0000014C B500            PUSH{LR}
+  157 0000014E BF08 F000 
+              F980             BLEQ             VarreTerceiraColuna
+  158 00000154 F85D EB04       POP{LR}
+  159 00000158         
+  160 00000158 2880            CMP              R0, #2_10000000
+  161 0000015A B500            PUSH{LR}
+  162 0000015C BF08 F000 
+              F99B             BLEQ             VarreQuartaColuna
+  163 00000162 F85D EB04       POP{LR}
+  164 00000166         
+  165 00000166 E7BA            B                LoopLeColuna
+  166 00000168         
+  167 00000168         
+  168 00000168         EscreveTextoLCD
+  169 00000168         
+  170 00000168 F04F 0200       MOV              R2, #0
+  171 0000016C F04F 0300       MOV              R3, #0
+  172 00000170         
+  173 00000170 B500            PUSH{LR}
+  174 00000172 F7FF FFFE       BL               Display_Clear
+  175 00000176 F85D EB04       POP{LR}
+  176 0000017A         
+  177 0000017A 2E03            CMP              R6, #3
+  178 0000017C BF08 F04F 
+              0C04             MOVEQ            R12, #4
+  179 00000182         
+  180 00000182 F1BC 0F00       CMP              R12, #0
+  181 00000186 BF08 4CDB       LDREQ            R4,=STRING_ABERTO ; string para
+                                                             o display
+  182 0000018A         
+  183 0000018A F1BC 0F01       CMP              R12, #1
+  184 0000018E BF08 4CDA       LDREQ            R4, =STRING_FECHANDO
+  185 00000192         
+  186 00000192 F1BC 0F02       CMP              R12, #2
+  187 00000196 BF08 4CD9       LDREQ            R4, =STRING_FECHADO
+  188 0000019A         
+  189 0000019A F1BC 0F03       CMP              R12, #3
+  190 0000019E BF08 4CD8       LDREQ            R4, =STRING_ABRINDO
+  191 000001A2         
+  192 000001A2 F1BC 0F04       CMP              R12, #4
+  193 000001A6 BF08 4CD7       LDREQ            R4, =STRING_TRANCADO
+  194 000001AA         
+  195 000001AA F1BC 0F05       CMP              R12, #5
+  196 000001AE BF08 4CD6       LDREQ            R4, =STRING_MESTRA
+  197 000001B2         
+  198 000001B2         EscreveString
+
+
+
+ARM Macro Assembler    Page 6 
+
+
+  199 000001B2 5CE5            LDRB             R5, [R4, R3]
+  200 000001B4 F103 0301       ADD              R3, R3, #1  ; indice do vetor q
+                                                            ue vai ser lido
+  201 000001B8         
+  202 000001B8 2D00            CMP              R5, #0      ; Checa se acabou a
+                                                             string
+  203 000001BA D01C            BEQ              TerminouLCD
+  204 000001BC         
+  205 000001BC 2D40            CMP              R5, #0x40   ; Checa por nova li
+                                                            nha, se for nao imp
+                                                            rime
+  206 000001BE D113            BNE              AtualizaDisplay
+  207 000001C0         
+  208 000001C0 F04F 00C0       MOV              R0, #0xC0   ; Pula para segunda
+                                                             linha
+  209 000001C4 B500            PUSH{LR}
+  210 000001C6 F7FF FFFE       BL               Display_Config
+  211 000001CA F85D EB04       POP{LR}
+  212 000001CE         
+  213 000001CE E7F0            B                EscreveString
+  214 000001D0         
+  215 000001D0         
+  216 000001D0         AdicionaDigito
+  217 000001D0 B500            PUSH{LR}
+  218 000001D2 4CCF            LDR              R4, =STRING_ASTERISCO
+  219 000001D4 7825            LDRB             R5, [R4]
+  220 000001D6 4628            MOV              R0, R5
+  221 000001D8         
+  222 000001D8 B500            PUSH{LR}
+  223 000001DA F7FF FFFE       BL               Display_Write
+  224 000001DE F85D EB04       POP{LR}
+  225 000001E2         
+  226 000001E2 F85D EB04       POP{LR}
+  227 000001E6 4770            BX               LR
+  228 000001E8         
+  229 000001E8         
+  230 000001E8         AtualizaDisplay
+  231 000001E8 4628            MOV              R0, R5
+  232 000001EA B500            PUSH{LR}
+  233 000001EC F7FF FFFE       BL               Display_Write
+  234 000001F0 F85D EB04       POP{LR}
+  235 000001F4         
+  236 000001F4 E7DD            B                EscreveString
+  237 000001F6         
+  238 000001F6         
+  239 000001F6         TerminouLCD
+  240 000001F6 F04F 00C8       MOV              R0,#200
+  241 000001FA B500            PUSH{LR}
+  242 000001FC F7FF FFFE       BL               SysTick_Wait1ms
+  243 00000200 F85D EB04       POP              {LR}
+  244 00000204         
+  245 00000204 F241 3088       MOV              R0, #5000
+  246 00000208 F1BC 0F01       CMP              R12, #1
+  247 0000020C B500            PUSH{LR}
+  248 0000020E BF08 F7FF 
+              FFFE             BLEQ             SysTick_Wait1ms
+  249 00000214 F85D EB04       POP              {LR}
+  250 00000218         
+  251 00000218 F1BC 0F01       CMP              R12, #1
+
+
+
+ARM Macro Assembler    Page 7 
+
+
+  252 0000021C BF04            ITT              EQ
+  253 0000021E F04F 0C02       MOVEQ            R12, #2
+  254 00000222 E7A1            BEQ              EscreveTextoLCD
+  255 00000224         
+  256 00000224 F241 3088       MOV              R0, #5000
+  257 00000228 F1BC 0F03       CMP              R12, #3
+  258 0000022C B500            PUSH{LR}
+  259 0000022E BF08 F7FF 
+              FFFE             BLEQ             SysTick_Wait1ms
+  260 00000234 F85D EB04       POP              {LR}
+  261 00000238         
+  262 00000238 F1BC 0F03       CMP              R12, #3     ; ta certo?
+  263 0000023C BF04            ITT              EQ
+  264 0000023E F04F 0C00       MOVEQ            R12, #0
+  265 00000242 E791            BEQ              EscreveTextoLCD
+  266 00000244         
+  267 00000244 F1BC 0F04       CMP              R12, #4
+  268 00000248 F000 809C       BEQ.W            LoopCofreTravado ;.W eh o sufix
+                                                            o para branch de 32
+                                                             bits
+  269 0000024C         
+  270 0000024C E747            B                LoopLeColuna
+  271 0000024E         
+  272 0000024E         
+  273 0000024E         EsperaEnter
+  274 0000024E         
+  275 0000024E F04F 0040       MOV              R0, #2_01000000 ; Transformando
+                                                             terceira coluna na
+                                                             que vai ser usada
+  276 00000252         
+  277 00000252 B501            PUSH{LR,         R0}
+  278 00000254 F7FF FFFE       BL               PortM_Dir
+  279 00000258 E8BD 4001       POP{LR,          R0}
+  280 0000025C         
+  281 0000025C B500            PUSH{LR}
+  282 0000025E F7FF FFFE       BL               PortM_Output
+  283 00000262 F85D EB04       POP{LR}
+  284 00000266         
+  285 00000266 B500            PUSH{LR}
+  286 00000268 F7FF FFFE       BL               PortL_Input
+  287 0000026C F85D EB04       POP{LR}
+  288 00000270         
+  289 00000270 B501            PUSH{R0,         LR}
+  290 00000272 F04F 0032       MOV              R0, #50
+  291 00000276 F7FF FFFE       BL               SysTick_Wait1ms
+  292 0000027A E8BD 4001       POP{R0,          LR}
+  293 0000027E         
+  294 0000027E 2A07            CMP              R2, #7
+  295 00000280 D007            BEQ              ApertouEnter
+  296 00000282         
+  297 00000282 F1BC 0F05       CMP              R12, #5
+  298 00000286 B401            PUSH{R0}
+  299 00000288 BF08 F000 
+              F880             BLEQ             LoopLeds
+  300 0000028E BC01            POP{R0}
+  301 00000290         
+  302 00000290 E7DD            B                EsperaEnter
+  303 00000292         
+  304 00000292         
+
+
+
+ARM Macro Assembler    Page 8 
+
+
+  305 00000292         ApertouEnter
+  306 00000292         ;(0-aberto, 1-fechando, 2-fechado, 3-Abrindo, 4-Trancado
+                       ) 
+  307 00000292 F04F 0B00       MOV              R11, #0
+  308 00000296         
+  309 00000296 BF08 4C9E       LDREQ            R4,=quantidade_digitos_corretos
+  310 0000029A F85F 81FC       LDR              R8, =senha  ;pegando endereco 
+  311 0000029E 4F9F            LDR              R7, =tentativa
+  312 000002A0         
+  313 000002A0 F1BC 0F00       CMP              R12, #0
+  314 000002A4 BF08 F04F 
+              0C01             MOVEQ            R12, #1
+  315 000002AA         
+  316 000002AA F1BC 0F02       CMP              R12, #2
+  317 000002AE BF02            ITTT             EQ
+  318 000002B0 2000            MOVEQ            R0,#0
+  319 000002B2 7020            STRBEQ           R0, [R4]
+  320 000002B4 E028            BEQ              ComparaSenhaTentativa
+  321 000002B6         
+  322 000002B6 F1BC 0F05       CMP              R12, #5
+  323 000002BA BF01            ITTTT            EQ
+  324 000002BC F85F 821C       LDREQ            R8,=senha_mestra
+  325 000002C0 2000            MOVEQ            R0,#0
+  326 000002C2 7020            STRBEQ           R0, [R4]
+  327 000002C4 E03F            BEQ              ComparaSenhaMestra
+  328 000002C6         
+  329 000002C6 E74F            B                EscreveTextoLCD
+  330 000002C8         
+  331 000002C8         ;B ComparaSenhaTentativa
+  332 000002C8         
+  333 000002C8         SalvaDigitoSenha
+  334 000002C8         
+  335 000002C8 F1BC 0F00       CMP              R12, #0
+  336 000002CC BF01            ITTTT            EQ
+  337 000002CE F888 9000       STRBEQ           R9, [R8]
+  338 000002D2 F108 0801       ADDEQ            R8, #1
+  339 000002D6 F10B 0B01       ADDEQ            R11, #1
+  340 000002DA F7FF FF79       BLEQ             AdicionaDigito
+  341 000002DE         
+  342 000002DE F1BC 0F02       CMP              R12, #2
+  343 000002E2 BF01            ITTTT            EQ
+  344 000002E4 F887 9000       STRBEQ           R9, [R7]
+  345 000002E8 3701            ADDEQ            R7, #1
+  346 000002EA F10B 0B01       ADDEQ            R11, #1
+  347 000002EE F7FF FF6F       BLEQ             AdicionaDigito
+  348 000002F2         
+  349 000002F2 F1BC 0F05       CMP              R12, #5
+  350 000002F6 BF01            ITTTT            EQ
+  351 000002F8 F887 9000       STRBEQ           R9, [R7]
+  352 000002FC 3701            ADDEQ            R7, #1
+  353 000002FE F10B 0B01       ADDEQ            R11, #1
+  354 00000302 F7FF FF65       BLEQ             AdicionaDigito
+  355 00000306         
+  356 00000306         
+  357 00000306 E6EA            B                LoopLeColuna
+  358 00000308         
+  359 00000308         ComparaSenhaTentativa
+  360 00000308         
+  361 00000308 2E03            CMP              R6, #3      ; Caso falhe mais q
+
+
+
+ARM Macro Assembler    Page 9 
+
+
+                                                            ue 3 vezes
+  362 0000030A BF28 F000 
+              F835             BLCS             BloqueiaCofre
+  363 00000310         
+  364 00000310 F898 5000       LDRB             R5, [R8]
+  365 00000314 F897 9000       LDRB             R9, [R7]
+  366 00000318         
+  367 00000318 454D            CMP              R5, R9
+  368 0000031A BF1F            ITTTT            NE
+  369 0000031C 3601            ADDNE            R6, #1
+  370 0000031E F85F 8280       LDRNE            R8,=senha
+  371 00000322 4F7E            LDRNE            R7,=tentativa
+  372 00000324 E720            BNE              EscreveTextoLCD
+  373 00000326         
+  374 00000326 454D            CMP              R5, R9
+  375 00000328 BF01            ITTTT            EQ
+  376 0000032A F108 0801       ADDEQ            R8, #1
+  377 0000032E 3701            ADDEQ            R7, #1
+  378 00000330 3001            ADDEQ            R0, #1
+  379 00000332 7020            STRBEQ           R0, [R4]
+  380 00000334         
+  381 00000334         
+  382 00000334 2804            CMP              R0, #4
+  383 00000336 BF01            ITTTT            EQ
+  384 00000338 F04F 0C03       MOVEQ            R12, #3
+  385 0000033C F85F 82A0       LDREQ            R8,=senha
+  386 00000340 4F76            LDREQ            R7,=tentativa
+  387 00000342 E711            BEQ              EscreveTextoLCD
+  388 00000344         
+  389 00000344 E7E0            B                ComparaSenhaTentativa
+  390 00000346         
+  391 00000346         ComparaSenhaMestra
+  392 00000346         
+  393 00000346 F898 5000       LDRB             R5, [R8]    ;salvando o valor d
+                                                            o endereco
+  394 0000034A F897 9000       LDRB             R9, [R7]
+  395 0000034E         
+  396 0000034E 454D            CMP              R5, R9
+  397 00000350 BF1E            ITTT             NE
+  398 00000352 F85F 82B0       LDRNE            R8,=senha_mestra
+  399 00000356 4F71            LDRNE            R7,=tentativa
+  400 00000358 E706            BNE              EscreveTextoLCD
+  401 0000035A         
+  402 0000035A 454D            CMP              R5, R9
+  403 0000035C BF01            ITTTT            EQ
+  404 0000035E F108 0801       ADDEQ            R8, #1
+  405 00000362 3701            ADDEQ            R7, #1
+  406 00000364 3001            ADDEQ            R0, #1
+  407 00000366 7020            STRBEQ           R0, [R4]
+  408 00000368         
+  409 00000368         
+  410 00000368 2804            CMP              R0, #4
+  411 0000036A BF01            ITTTT            EQ
+  412 0000036C F04F 0C03       MOVEQ            R12, #3
+  413 00000370 F85F 82D4       LDREQ            R8,=senha
+  414 00000374 4F69            LDREQ            R7,=tentativa
+  415 00000376 E6F7            BEQ              EscreveTextoLCD
+  416 00000378         
+  417 00000378 E7E5            B                ComparaSenhaMestra
+
+
+
+ARM Macro Assembler    Page 10 
+
+
+  418 0000037A         
+  419 0000037A         BloqueiaCofre
+  420 0000037A F85F 82DC       LDR              R8,=senha
+  421 0000037E 4F67            LDR              R7,=tentativa
+  422 00000380 F04F 0600       MOV              R6, #0
+  423 00000384         
+  424 00000384         LoopCofreTravado
+  425 00000384 2D05            CMP              R5,#5       ;maneira porca, mas
+                                                             é o que tem
+  426 00000386 D016            BEQ              CofreDestrava
+  427 00000388 F000 F801       BL               LoopLeds
+  428 0000038C E7FA            B                LoopCofreTravado
+  429 0000038E         
+  430 0000038E         LoopLeds
+  431 0000038E B500            PUSH{LR}
+  432 00000390 F04F 0020       MOV              R0, #0x20   ; Acende LEDs
+  433 00000394 F7FF FFFE       BL               Led_Enable
+  434 00000398         
+  435 00000398 F04F 0064       MOV              R0,#100
+  436 0000039C F7FF FFFE       BL               SysTick_Wait1ms
+  437 000003A0         
+  438 000003A0 F04F 0000       MOV              R0, #0x00   ; Apaga LEDs
+  439 000003A4 F7FF FFFE       BL               Led_Enable
+  440 000003A8         
+  441 000003A8 F04F 0064       MOV              R0,#100
+  442 000003AC F7FF FFFE       BL               SysTick_Wait1ms
+  443 000003B0 F85D EB04       POP{LR}
+  444 000003B4 4770            BX               LR
+  445 000003B6         
+  446 000003B6         
+  447 000003B6         CofreDestrava
+  448 000003B6 F04F 0C05       MOV              R12, #5
+  449 000003BA F04F 0600       MOV              R6, #0
+  450 000003BE E6D3            B                EscreveTextoLCD
+  451 000003C0         
+  452 000003C0         
+  453 000003C0         
+  454 000003C0         VarrePrimeiraColuna                  ;Olhe as teclas de 
+                                                            cima para baixo
+  455 000003C0 B500            PUSH{LR}
+  456 000003C2 F7FF FFFE       BL               PortL_Input
+  457 000003C6 F85D EB04       POP{LR}
+  458 000003CA         
+  459 000003CA B505            PUSH{R0,         R2, LR}
+  460 000003CC F04F 0096       MOV              R0, #150
+  461 000003D0 F7FF FFFE       BL               SysTick_Wait1ms
+  462 000003D4 E8BD 4005       POP{R0,          R2, LR}
+  463 000003D8         
+  464 000003D8         
+  465 000003D8 2A0E            CMP              R2, #2_1110 ;Caso apertou a pri
+                                                            meira tecla
+  466 000003DA BF08 F04F 
+              0901             MOVEQ            R9, #1
+  467 000003E0         
+  468 000003E0 2A0D            CMP              R2, #2_1101 ;Caso apertou a seg
+                                                            unda tecla
+  469 000003E2 BF08 F04F 
+              0904             MOVEQ            R9, #4
+  470 000003E8         
+
+
+
+ARM Macro Assembler    Page 11 
+
+
+  471 000003E8 2A0B            CMP              R2, #2_1011 ;Caso apertou a ter
+                                                            ceira tecla
+  472 000003EA BF08 F04F 
+              0907             MOVEQ            R9, #7
+  473 000003F0         
+  474 000003F0 2A07            CMP              R2, #2_0111 ;Caso apertou a qua
+                                                            rta tecla
+  475 000003F2 BF08 F04F 
+              090E             MOVEQ            R9, #14
+  476 000003F8         
+  477 000003F8 2A0F            CMP              R2, #0xF
+  478 000003FA B500            PUSH{LR}
+  479 000003FC BF18 F7FF 
+              FF63             BLNE             SalvaDigitoSenha
+  480 00000402 F85D EB04       POP{LR}
+  481 00000406         
+  482 00000406         
+  483 00000406 4770            BX               LR
+  484 00000408         
+  485 00000408         VarreSegundaColuna                   ;Olhe as teclas de 
+                                                            cima para baixo
+  486 00000408 B500            PUSH{LR}
+  487 0000040A F7FF FFFE       BL               PortL_Input
+  488 0000040E F85D EB04       POP{LR}
+  489 00000412         
+  490 00000412 B505            PUSH{R0,         R2, LR}
+  491 00000414 F04F 0096       MOV              R0, #150
+  492 00000418 F7FF FFFE       BL               SysTick_Wait1ms
+  493 0000041C E8BD 4005       POP{R0,          R2, LR}
+  494 00000420         
+  495 00000420 2A0E            CMP              R2, #2_1110 ;Caso apertou a pri
+                                                            meira tecla
+  496 00000422 BF08 F04F 
+              0902             MOVEQ            R9, #2
+  497 00000428         
+  498 00000428 2A0D            CMP              R2, #2_1101 ;Caso apertou a seg
+                                                            unda tecla
+  499 0000042A BF08 F04F 
+              0905             MOVEQ            R9, #5
+  500 00000430         
+  501 00000430 2A0B            CMP              R2, #2_1011 ;Caso apertou a ter
+                                                            ceira tecla
+  502 00000432 BF08 F04F 
+              0908             MOVEQ            R9, #8
+  503 00000438         
+  504 00000438 2A07            CMP              R2, #2_0111 ;Caso apertou a qua
+                                                            rta tecla
+  505 0000043A BF08 F04F 
+              0900             MOVEQ            R9, #0
+  506 00000440         
+  507 00000440 2A0F            CMP              R2, #0xF
+  508 00000442 B500            PUSH{LR}
+  509 00000444 BF18 F7FF 
+              FF3F             BLNE             SalvaDigitoSenha
+  510 0000044A F85D EB04       POP{LR}
+  511 0000044E         
+  512 0000044E E8BD 0204       POP{R2,R9}
+  513 00000452         
+  514 00000452 4770            BX               LR
+
+
+
+ARM Macro Assembler    Page 12 
+
+
+  515 00000454         
+  516 00000454         VarreTerceiraColuna                  ;Olhe as teclas de 
+                                                            cima para baixo
+  517 00000454 B500            PUSH{LR}
+  518 00000456 F7FF FFFE       BL               PortL_Input
+  519 0000045A F85D EB04       POP{LR}
+  520 0000045E         
+  521 0000045E B505            PUSH{R0,         R2, LR}
+  522 00000460 F04F 0096       MOV              R0, #150
+  523 00000464 F7FF FFFE       BL               SysTick_Wait1ms
+  524 00000468 E8BD 4005       POP{R0,          R2, LR}
+  525 0000046C         
+  526 0000046C 2A0E            CMP              R2, #2_1110 ;Caso apertou a pri
+                                                            meira tecla
+  527 0000046E BF08 F04F 
+              0903             MOVEQ            R9, #3
+  528 00000474         
+  529 00000474 2A0D            CMP              R2, #2_1101 ;Caso apertou a seg
+                                                            unda tecla
+  530 00000476 BF08 F04F 
+              0906             MOVEQ            R9, #6
+  531 0000047C         
+  532 0000047C 2A0B            CMP              R2, #2_1011 ;Caso apertou a ter
+                                                            ceira tecla
+  533 0000047E BF08 F04F 
+              0909             MOVEQ            R9, #9
+  534 00000484         
+  535 00000484 2A0F            CMP              R2, #0xF
+  536 00000486 B500            PUSH{LR}
+  537 00000488 BF18 F7FF 
+              FF1D             BLNE             SalvaDigitoSenha
+  538 0000048E F85D EB04       POP{LR}
+  539 00000492         
+  540 00000492 E8BD 0204       POP{R2,R9}
+  541 00000496         
+  542 00000496 4770            BX               LR
+  543 00000498         
+  544 00000498         VarreQuartaColuna                    ;Olhe as teclas de 
+                                                            cima para baixo
+  545 00000498 B500            PUSH{LR}
+  546 0000049A F7FF FFFE       BL               PortL_Input
+  547 0000049E F85D EB04       POP{LR}
+  548 000004A2         
+  549 000004A2 B505            PUSH{R0,         R2, LR}
+  550 000004A4 F04F 0096       MOV              R0, #150
+  551 000004A8 F7FF FFFE       BL               SysTick_Wait1ms
+  552 000004AC E8BD 4005       POP{R0,          R2, LR}
+  553 000004B0         
+  554 000004B0 2A0E            CMP              R2, #2_1110 ;Caso apertou a pri
+                                                            meira tecla
+  555 000004B2 BF08 F04F 
+              090A             MOVEQ            R9, #10
+  556 000004B8         
+  557 000004B8 2A0D            CMP              R2, #2_1101 ;Caso apertou a seg
+                                                            unda tecla
+  558 000004BA BF08 F04F 
+              090B             MOVEQ            R9, #11
+  559 000004C0         
+  560 000004C0 2A0B            CMP              R2, #2_1011 ;Caso apertou a ter
+
+
+
+ARM Macro Assembler    Page 13 
+
+
+                                                            ceira tecla
+  561 000004C2 BF08 F04F 
+              090C             MOVEQ            R9, #12
+  562 000004C8         
+  563 000004C8 2A07            CMP              R2, #2_0111 ;Caso apertou a qua
+                                                            rta tecla
+  564 000004CA BF08 F04F 
+              090D             MOVEQ            R9, #13
+  565 000004D0         
+  566 000004D0 2A0F            CMP              R2, #0xF
+  567 000004D2 B500            PUSH{LR}
+  568 000004D4 BF18 F7FF 
+              FEF7             BLNE             SalvaDigitoSenha
+  569 000004DA F85D EB04       POP{LR}
+  570 000004DE         
+  571 000004DE 4770            BX               LR
+  572 000004E0         
+  573 000004E0         GPIOPortJ_Handler                    ;Acho que é isso <-
+                                                            
+  574 000004E0 B415            PUSH{R0,R2,R4}
+  575 000004E2 4C10            LDR              R4, =GPIO_PORTJ_AHB_ICR_R
+  576 000004E4 F04F 0201       MOV              R2, #2_1
+  577 000004E8 6022            STR              R2, [R4]
+  578 000004EA         
+  579 000004EA F1BC 0F04       CMP              R12, #4
+  580 000004EE BF08            IT               EQ
+  581 000004F0 2505            MOVEQ            R5, #5
+  582 000004F2 BC15            POP{R0,R2,R4}
+  583 000004F4 4770            BX               LR
+  584 000004F6         
+  585 000004F6         
+  586 000004F6         ; ------------------------------------------------------
+                       --------------------------------------------------------
+                       -----------
+  587 000004F6         ; Fim do Arquivo
+  588 000004F6         ; ------------------------------------------------------
+                       --------------------------------------------------------
+                       ----------- 
+  589 000004F6 00 00           ALIGN                        ;Garante que o fim 
+                                                            da seção está alinh
+                                                            ada 
+  590 000004F8                 END                          ;Fim do arquivo
+              00000000 
+              00000000 
+              00000000 
+              00000000 
+              00000000 
+              00000000 
+              00000000 
+              00000000 
+              00000000 
+              00000000 
+              00000000 
+              4006041C 
+Command Line: --debug --xref --diag_suppress=9931,A1950W --cpu=Cortex-M4.fp.sp 
+--depend=.\objects\main.d -o.\objects\main.o -ID:\Users\pedro\AppData\Local\Arm
+\Packs\Keil\TM4C_DFP\1.1.0\Device\Include\TM4C129 --predefine="__EVAL SETA 1" -
+-predefine="__UVISION_VERSION SETA 538" --predefine="TM4C1294NCPDT SETA 1" --li
+st=.\listings\main.lst main.s
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Relocatable symbols
+
+DATA 00000000
+
+Symbol: DATA
+   Definitions
+      At line 21 in file main.s
+   Uses
+      None
+Comment: DATA unused
+quantidade_digitos_corretos 00000008
+
+Symbol: quantidade_digitos_corretos
+   Definitions
+      At line 30 in file main.s
+   Uses
+      At line 309 in file main.s
+Comment: quantidade_digitos_corretos used once
+senha 00000000
+
+Symbol: senha
+   Definitions
+      At line 28 in file main.s
+   Uses
+      At line 81 in file main.s
+      At line 310 in file main.s
+      At line 370 in file main.s
+      At line 385 in file main.s
+      At line 413 in file main.s
+      At line 420 in file main.s
+
+senha_mestra 00000009
+
+Symbol: senha_mestra
+   Definitions
+      At line 31 in file main.s
+   Uses
+      At line 82 in file main.s
+      At line 324 in file main.s
+      At line 398 in file main.s
+
+tentativa 00000004
+
+Symbol: tentativa
+   Definitions
+      At line 29 in file main.s
+   Uses
+      At line 91 in file main.s
+      At line 311 in file main.s
+      At line 371 in file main.s
+      At line 386 in file main.s
+      At line 399 in file main.s
+      At line 414 in file main.s
+      At line 421 in file main.s
+
+5 symbols
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Relocatable symbols
+
+.text 00000000
+
+Symbol: .text
+   Definitions
+      At line 39 in file main.s
+   Uses
+      None
+Comment: .text unused
+AdicionaDigito 000001D0
+
+Symbol: AdicionaDigito
+   Definitions
+      At line 216 in file main.s
+   Uses
+      At line 340 in file main.s
+      At line 347 in file main.s
+      At line 354 in file main.s
+
+ApertouEnter 00000292
+
+Symbol: ApertouEnter
+   Definitions
+      At line 305 in file main.s
+   Uses
+      At line 295 in file main.s
+Comment: ApertouEnter used once
+AtualizaDisplay 000001E8
+
+Symbol: AtualizaDisplay
+   Definitions
+      At line 230 in file main.s
+   Uses
+      At line 206 in file main.s
+Comment: AtualizaDisplay used once
+BloqueiaCofre 0000037A
+
+Symbol: BloqueiaCofre
+   Definitions
+      At line 419 in file main.s
+   Uses
+      At line 362 in file main.s
+Comment: BloqueiaCofre used once
+CofreDestrava 000003B6
+
+Symbol: CofreDestrava
+   Definitions
+      At line 447 in file main.s
+   Uses
+      At line 426 in file main.s
+Comment: CofreDestrava used once
+ComparaSenhaMestra 00000346
+
+Symbol: ComparaSenhaMestra
+   Definitions
+      At line 391 in file main.s
+   Uses
+      At line 327 in file main.s
+      At line 417 in file main.s
+
+
+
+
+ARM Macro Assembler    Page 2 Alphabetic symbol ordering
+Relocatable symbols
+
+ComparaSenhaTentativa 00000308
+
+Symbol: ComparaSenhaTentativa
+   Definitions
+      At line 359 in file main.s
+   Uses
+      At line 320 in file main.s
+      At line 389 in file main.s
+
+ConfiguraTeclado 000000CE
+
+Symbol: ConfiguraTeclado
+   Definitions
+      At line 110 in file main.s
+   Uses
+      At line 106 in file main.s
+Comment: ConfiguraTeclado used once
+EscreveString 000001B2
+
+Symbol: EscreveString
+   Definitions
+      At line 198 in file main.s
+   Uses
+      At line 213 in file main.s
+      At line 236 in file main.s
+
+EscreveTextoLCD 00000168
+
+Symbol: EscreveTextoLCD
+   Definitions
+      At line 168 in file main.s
+   Uses
+      At line 105 in file main.s
+      At line 254 in file main.s
+      At line 265 in file main.s
+      At line 329 in file main.s
+      At line 372 in file main.s
+      At line 387 in file main.s
+      At line 400 in file main.s
+      At line 415 in file main.s
+      At line 450 in file main.s
+
+EsperaEnter 0000024E
+
+Symbol: EsperaEnter
+   Definitions
+      At line 273 in file main.s
+   Uses
+      At line 137 in file main.s
+      At line 302 in file main.s
+
+GPIOPortJ_Handler 000004E0
+
+Symbol: GPIOPortJ_Handler
+   Definitions
+      At line 573 in file main.s
+   Uses
+      At line 63 in file main.s
+Comment: GPIOPortJ_Handler used once
+
+
+
+ARM Macro Assembler    Page 3 Alphabetic symbol ordering
+Relocatable symbols
+
+LoopCofreTravado 00000384
+
+Symbol: LoopCofreTravado
+   Definitions
+      At line 424 in file main.s
+   Uses
+      At line 268 in file main.s
+      At line 428 in file main.s
+
+LoopLeColuna 000000DE
+
+Symbol: LoopLeColuna
+   Definitions
+      At line 117 in file main.s
+   Uses
+      At line 107 in file main.s
+      At line 165 in file main.s
+      At line 270 in file main.s
+      At line 357 in file main.s
+
+LoopLeds 0000038E
+
+Symbol: LoopLeds
+   Definitions
+      At line 430 in file main.s
+   Uses
+      At line 142 in file main.s
+      At line 299 in file main.s
+      At line 427 in file main.s
+
+MainLoop 000000C0
+
+Symbol: MainLoop
+   Definitions
+      At line 102 in file main.s
+   Uses
+      None
+Comment: MainLoop unused
+STRING_ABERTO 00000000
+
+Symbol: STRING_ABERTO
+   Definitions
+      At line 66 in file main.s
+   Uses
+      At line 181 in file main.s
+Comment: STRING_ABERTO used once
+STRING_ABRINDO 00000014
+
+Symbol: STRING_ABRINDO
+   Definitions
+      At line 67 in file main.s
+   Uses
+      At line 190 in file main.s
+Comment: STRING_ABRINDO used once
+STRING_ASTERISCO 00000069
+
+Symbol: STRING_ASTERISCO
+   Definitions
+      At line 72 in file main.s
+
+
+
+ARM Macro Assembler    Page 4 Alphabetic symbol ordering
+Relocatable symbols
+
+   Uses
+      At line 218 in file main.s
+Comment: STRING_ASTERISCO used once
+STRING_FECHADO 00000022
+
+Symbol: STRING_FECHADO
+   Definitions
+      At line 68 in file main.s
+   Uses
+      At line 187 in file main.s
+Comment: STRING_FECHADO used once
+STRING_FECHANDO 00000037
+
+Symbol: STRING_FECHANDO
+   Definitions
+      At line 69 in file main.s
+   Uses
+      At line 184 in file main.s
+Comment: STRING_FECHANDO used once
+STRING_MESTRA 00000055
+
+Symbol: STRING_MESTRA
+   Definitions
+      At line 71 in file main.s
+   Uses
+      At line 196 in file main.s
+Comment: STRING_MESTRA used once
+STRING_TRANCADO 00000046
+
+Symbol: STRING_TRANCADO
+   Definitions
+      At line 70 in file main.s
+   Uses
+      At line 193 in file main.s
+Comment: STRING_TRANCADO used once
+SalvaDigitoSenha 000002C8
+
+Symbol: SalvaDigitoSenha
+   Definitions
+      At line 333 in file main.s
+   Uses
+      At line 479 in file main.s
+      At line 509 in file main.s
+      At line 537 in file main.s
+      At line 568 in file main.s
+
+Start 0000006C
+
+Symbol: Start
+   Definitions
+      At line 75 in file main.s
+   Uses
+      At line 42 in file main.s
+Comment: Start used once
+TerminouLCD 000001F6
+
+Symbol: TerminouLCD
+   Definitions
+      At line 239 in file main.s
+
+
+
+ARM Macro Assembler    Page 5 Alphabetic symbol ordering
+Relocatable symbols
+
+   Uses
+      At line 203 in file main.s
+Comment: TerminouLCD used once
+VarrePrimeiraColuna 000003C0
+
+Symbol: VarrePrimeiraColuna
+   Definitions
+      At line 454 in file main.s
+   Uses
+      At line 147 in file main.s
+Comment: VarrePrimeiraColuna used once
+VarreQuartaColuna 00000498
+
+Symbol: VarreQuartaColuna
+   Definitions
+      At line 544 in file main.s
+   Uses
+      At line 162 in file main.s
+Comment: VarreQuartaColuna used once
+VarreSegundaColuna 00000408
+
+Symbol: VarreSegundaColuna
+   Definitions
+      At line 485 in file main.s
+   Uses
+      At line 152 in file main.s
+Comment: VarreSegundaColuna used once
+VarreTerceiraColuna 00000454
+
+Symbol: VarreTerceiraColuna
+   Definitions
+      At line 516 in file main.s
+   Uses
+      At line 157 in file main.s
+Comment: VarreTerceiraColuna used once
+31 symbols
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Absolute symbols
+
+GPIO_PORTJ_AHB_ICR_R 4006041C
+
+Symbol: GPIO_PORTJ_AHB_ICR_R
+   Definitions
+      At line 34 in file main.s
+   Uses
+      At line 575 in file main.s
+Comment: GPIO_PORTJ_AHB_ICR_R used once
+1 symbol
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+External symbols
+
+Display_Clear 00000000
+
+Symbol: Display_Clear
+   Definitions
+      At line 58 in file main.s
+   Uses
+      At line 104 in file main.s
+      At line 174 in file main.s
+
+Display_Config 00000000
+
+Symbol: Display_Config
+   Definitions
+      At line 57 in file main.s
+   Uses
+      At line 210 in file main.s
+Comment: Display_Config used once
+Display_Init 00000000
+
+Symbol: Display_Init
+   Definitions
+      At line 56 in file main.s
+   Uses
+      At line 80 in file main.s
+Comment: Display_Init used once
+Display_Write 00000000
+
+Symbol: Display_Write
+   Definitions
+      At line 59 in file main.s
+   Uses
+      At line 223 in file main.s
+      At line 233 in file main.s
+
+GPIO_Init 00000000
+
+Symbol: GPIO_Init
+   Definitions
+      At line 52 in file main.s
+   Uses
+      At line 78 in file main.s
+Comment: GPIO_Init used once
+Interrupt_Init 00000000
+
+Symbol: Interrupt_Init
+   Definitions
+      At line 60 in file main.s
+   Uses
+      At line 79 in file main.s
+Comment: Interrupt_Init used once
+Led_Enable 00000000
+
+Symbol: Led_Enable
+   Definitions
+      At line 61 in file main.s
+   Uses
+      At line 433 in file main.s
+      At line 439 in file main.s
+
+
+
+
+ARM Macro Assembler    Page 2 Alphabetic symbol ordering
+External symbols
+
+PLL_Init 00000000
+
+Symbol: PLL_Init
+   Definitions
+      At line 48 in file main.s
+   Uses
+      At line 76 in file main.s
+Comment: PLL_Init used once
+PortL_Input 00000000
+
+Symbol: PortL_Input
+   Definitions
+      At line 53 in file main.s
+   Uses
+      At line 286 in file main.s
+      At line 456 in file main.s
+      At line 487 in file main.s
+      At line 518 in file main.s
+      At line 546 in file main.s
+
+PortM_Dir 00000000
+
+Symbol: PortM_Dir
+   Definitions
+      At line 54 in file main.s
+   Uses
+      At line 113 in file main.s
+      At line 128 in file main.s
+      At line 278 in file main.s
+
+PortM_Output 00000000
+
+Symbol: PortM_Output
+   Definitions
+      At line 55 in file main.s
+   Uses
+      At line 132 in file main.s
+      At line 282 in file main.s
+
+SysTick_Init 00000000
+
+Symbol: SysTick_Init
+   Definitions
+      At line 49 in file main.s
+   Uses
+      At line 77 in file main.s
+Comment: SysTick_Init used once
+SysTick_Wait1ms 00000000
+
+Symbol: SysTick_Wait1ms
+   Definitions
+      At line 50 in file main.s
+   Uses
+      At line 242 in file main.s
+      At line 248 in file main.s
+      At line 259 in file main.s
+      At line 291 in file main.s
+      At line 436 in file main.s
+      At line 442 in file main.s
+
+
+
+ARM Macro Assembler    Page 3 Alphabetic symbol ordering
+External symbols
+
+      At line 461 in file main.s
+      At line 492 in file main.s
+      At line 523 in file main.s
+      At line 551 in file main.s
+
+SysTick_Wait1us 00000000
+
+Symbol: SysTick_Wait1us
+   Definitions
+      At line 51 in file main.s
+   Uses
+      None
+Comment: SysTick_Wait1us unused
+14 symbols
+389 symbols in table
